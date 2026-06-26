@@ -111,6 +111,15 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface2);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:10px 16px;font-size:12px;color:var(--text);opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;z-index:100}
 .toast.show{opacity:1;transform:translateY(0)}
+.alarm-btn{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;font-size:11px;font-family:'Inter',sans-serif;background:transparent;border:0.5px solid var(--border);border-radius:var(--radius-sm);color:var(--hint);cursor:pointer;transition:all .15s}
+.alarm-btn:hover{border-color:var(--amber);color:var(--amber)}
+.alarm-btn.armed{border-color:var(--amber);color:var(--amber);background:rgba(249,168,64,.08)}
+.alarm-btn.armed .alarm-dot{background:var(--amber);animation:pulse 1s infinite}
+.alarm-dot{width:6px;height:6px;border-radius:50%;background:var(--hint);transition:background .2s}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.timer-display.amber{color:var(--amber)!important}
+.timer-display.green{color:var(--green)!important}
+.timer-display.red{color:var(--red)!important}
 
 @media(max-width:520px){
   .stats-row{grid-template-columns:repeat(2,1fr)}
@@ -153,6 +162,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
       </button>
       <button class="btn btn-ghost" id="btnCancel" onclick="cancelTimer()" disabled>
         cancelar <span class="kbd">esc</span>
+      </button>
+      <button class="alarm-btn" id="alarmBtn" onclick="openAlarm()" title="Configurar alarme">
+        <span class="alarm-dot" id="alarmDot"></span>
+        <i class="ti ti-bell" style="font-size:13px"></i>
+        <span id="alarmLabel">alarme</span>
       </button>
     </div>
   </div>
@@ -197,6 +211,37 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
     </div>
   </div>
 
+</div>
+
+<!-- alarm modal -->
+<div class="modal-overlay" id="alarmModal">
+  <div class="modal" style="width:380px">
+    <h3><i class="ti ti-bell" style="font-size:15px;margin-right:6px"></i>configurar alarme</h3>
+    <p>O timer vai tocar um som quando atingir o tempo configurado.</p>
+    <div style="margin-bottom:14px">
+      <div class="label" style="margin-bottom:8px">tocar quando chegar em</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+        <input type="number" id="alarmMin" style="width:72px;background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px;font-size:20px;text-align:center;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none" min="0" max="59" value="3">
+        <span style="color:var(--muted);font-size:13px">min</span>
+        <input type="number" id="alarmSec" style="width:72px;background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px;font-size:20px;text-align:center;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none" min="0" max="59" value="0">
+        <span style="color:var(--muted);font-size:13px">seg</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="alarm-btn" onclick="setAlarmTime(1,30)" style="font-size:11px;padding:4px 10px">1:30</button>
+        <button class="alarm-btn" onclick="setAlarmTime(2,0)" style="font-size:11px;padding:4px 10px">2:00</button>
+        <button class="alarm-btn" onclick="setAlarmTime(3,0)" style="font-size:11px;padding:4px 10px">3:00</button>
+        <button class="alarm-btn" onclick="setAlarmTime(4,0)" style="font-size:11px;padding:4px 10px">4:00</button>
+        <button class="alarm-btn" onclick="setAlarmTime(4,30)" style="font-size:11px;padding:4px 10px">4:30</button>
+      </div>
+    </div>
+    <div class="modal-btns" style="gap:6px">
+      <button class="btn btn-ghost" style="padding:7px 14px;font-size:13px" onclick="disableAlarm()">desativar</button>
+      <button class="btn btn-ghost" style="padding:7px 14px;font-size:13px" onclick="closeAlarmModal()">cancelar</button>
+      <button class="btn btn-primary" style="padding:7px 16px;font-size:13px" onclick="saveAlarm()">
+        <i class="ti ti-bell"></i> ativar alarme
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- modal confirmação reset -->
@@ -299,27 +344,46 @@ function selectBadge(f) {
   if (!timerInterval) document.getElementById('btnStart').disabled = false;
 }
 
+function tsColor(sec) {
+  if (sec < 180) return 'amber';       // 0–2:59
+  if (sec <= 270) return 'green';      // 3:00–4:30
+  return 'red';                        // > 4:30
+}
+
 function startTimer() {
   if (!activeBadge || timerInterval) return;
   startTime = new Date();
   startSlot = getSlot(startTime);
   elapsed = 0;
+  alarmFired = false;
   document.getElementById('slotDisplay').textContent = startSlot;
-  document.getElementById('timerDisplay').classList.add('running');
+  const disp = document.getElementById('timerDisplay');
+  disp.classList.remove('amber','green','red');
+  disp.classList.add('running');
   document.getElementById('btnStart').disabled = true;
   document.getElementById('btnStop').disabled = false;
   document.getElementById('btnCancel').disabled = false;
   timerInterval = setInterval(() => {
     elapsed = Math.floor((Date.now() - startTime) / 1000);
     document.getElementById('timerDisplay').textContent = fmtTime(elapsed);
+    // color feedback
+    const col = tsColor(elapsed);
+    disp.classList.remove('amber','green','red');
+    disp.classList.add(col);
+    // alarm
+    if (alarmTarget > 0 && !alarmFired && elapsed >= alarmTarget) {
+      alarmFired = true;
+      playAlarm();
+    }
   }, 500);
 }
 function cancelTimer() {
   if (!timerInterval) return;
   clearInterval(timerInterval); timerInterval = null;
   elapsed = 0; startTime = null;
-  document.getElementById('timerDisplay').textContent = '00:00:00';
-  document.getElementById('timerDisplay').classList.remove('running');
+  const disp = document.getElementById('timerDisplay');
+  disp.textContent = '00:00:00';
+  disp.classList.remove('running','amber','green','red');
   document.getElementById('btnStop').disabled = true;
   document.getElementById('btnCancel').disabled = true;
   document.getElementById('btnStart').disabled = !activeBadge;
@@ -338,8 +402,9 @@ function stopTimer() {
   };
   logs.push(entry);
   localStorage.setItem('qm_logs', JSON.stringify(logs));
-  document.getElementById('timerDisplay').textContent = '00:00:00';
-  document.getElementById('timerDisplay').classList.remove('running');
+  const disp = document.getElementById('timerDisplay');
+  disp.textContent = '00:00:00';
+  disp.classList.remove('running','amber','green','red');
   document.getElementById('btnStop').disabled = true;
   document.getElementById('btnCancel').disabled = true;
   document.getElementById('btnStart').disabled = !activeBadge;
@@ -364,6 +429,7 @@ document.addEventListener('keydown', e => {
   if (e.code === 'Escape') {
     if (timerInterval) cancelTimer();
     closeModal();
+    closeAlarmModal();
   }
 });
 document.addEventListener('keyup', e => {
@@ -507,6 +573,73 @@ async function sendToSheets(entry) {
   setTimeout(() => { s.textContent = ''; s.className = 'sync-status'; }, 3000);
 }
 
+// alarm state
+let alarmTarget = parseInt(localStorage.getItem('qm_alarm') || '0');
+let alarmFired = false;
+
+function updateAlarmBtn() {
+  const btn = document.getElementById('alarmBtn');
+  const lbl = document.getElementById('alarmLabel');
+  const dot = document.getElementById('alarmDot');
+  if (alarmTarget > 0) {
+    const m = Math.floor(alarmTarget/60), s = alarmTarget%60;
+    lbl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    btn.classList.add('armed');
+  } else {
+    lbl.textContent = 'alarme';
+    btn.classList.remove('armed');
+  }
+}
+function openAlarm() {
+  const m = Math.floor(alarmTarget/60) || 3;
+  const s = alarmTarget % 60 || 0;
+  document.getElementById('alarmMin').value = m;
+  document.getElementById('alarmSec').value = s;
+  document.getElementById('alarmModal').classList.add('show');
+}
+function closeAlarmModal() {
+  document.getElementById('alarmModal').classList.remove('show');
+}
+function setAlarmTime(m, s) {
+  document.getElementById('alarmMin').value = m;
+  document.getElementById('alarmSec').value = s;
+}
+function saveAlarm() {
+  const m = parseInt(document.getElementById('alarmMin').value) || 0;
+  const s = parseInt(document.getElementById('alarmSec').value) || 0;
+  alarmTarget = m * 60 + s;
+  localStorage.setItem('qm_alarm', alarmTarget);
+  closeAlarmModal();
+  updateAlarmBtn();
+  showToast(`alarme ativado — ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+}
+function disableAlarm() {
+  alarmTarget = 0;
+  localStorage.setItem('qm_alarm', '0');
+  closeAlarmModal();
+  updateAlarmBtn();
+  showToast('alarme desativado');
+}
+function playAlarm() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const beep = (freq, start, dur) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = freq;
+      o.type = 'sine';
+      g.gain.setValueAtTime(0.4, ctx.currentTime + start);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+      o.start(ctx.currentTime + start);
+      o.stop(ctx.currentTime + start + dur);
+    };
+    beep(880, 0, 0.15);
+    beep(880, 0.2, 0.15);
+    beep(1100, 0.4, 0.25);
+  } catch(e) {}
+}
+
 document.getElementById('scriptUrl').value = scriptUrl;
 if (activeBadge) {
   document.getElementById('activeBadgeLabel').textContent = SHORT[activeBadge] || activeBadge;
@@ -514,6 +647,7 @@ if (activeBadge) {
 }
 updateDateChip();
 setInterval(updateDateChip, 60000);
+updateAlarmBtn();
 renderBadges();
 renderStats();
 renderLog();
