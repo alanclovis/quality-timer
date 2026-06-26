@@ -111,6 +111,13 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 
 .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface2);border:0.5px solid var(--border2);border-radius:var(--radius-sm);padding:10px 16px;font-size:12px;color:var(--text);opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;z-index:100}
 .toast.show{opacity:1;transform:translateY(0)}
+.alarm-flash{display:none;position:fixed;inset:0;z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:16px;pointer-events:none}
+.alarm-flash.show{display:flex;animation:flashin .3s ease}
+.alarm-flash-bg{position:absolute;inset:0;background:rgba(249,168,64,.15);animation:flashpulse 0.6s ease infinite alternate}
+.alarm-flash-text{position:relative;font-size:48px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--amber);text-shadow:0 0 40px rgba(249,168,64,.8);animation:flashpulse 0.6s ease infinite alternate;text-align:center;line-height:1.2}
+.alarm-flash-sub{position:relative;font-size:14px;color:var(--amber);opacity:.8;font-family:'Inter',sans-serif}
+@keyframes flashin{from{opacity:0}to{opacity:1}}
+@keyframes flashpulse{from{opacity:.6}to{opacity:1}}
 .alarm-btn{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;font-size:11px;font-family:'Inter',sans-serif;background:transparent;border:0.5px solid var(--border);border-radius:var(--radius-sm);color:var(--hint);cursor:pointer;transition:all .15s}
 .alarm-btn:hover{border-color:var(--amber);color:var(--amber)}
 .alarm-btn.armed{border-color:var(--amber);color:var(--amber);background:rgba(249,168,64,.08)}
@@ -211,6 +218,13 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
     </div>
   </div>
 
+</div>
+
+<!-- alarm flash overlay -->
+<div class="alarm-flash" id="alarmFlash">
+  <div class="alarm-flash-bg"></div>
+  <div class="alarm-flash-text" id="alarmFlashTime">03:00</div>
+  <div class="alarm-flash-sub">⏰ alarme — lembre de enviar o caso</div>
 </div>
 
 <!-- alarm modal -->
@@ -470,12 +484,16 @@ function renderLog() {
     document.getElementById('logWrap').innerHTML = '<div class="empty">nenhum registro ainda hoje</div>';
     return;
   }
-  const rows = [...tl].reverse().map(l => `<tr>
+  const colorMap = { amber: 'var(--amber)', green: 'var(--green)', red: 'var(--red)' };
+  const rows = [...tl].reverse().map(l => {
+    const col = colorMap[tsColor(l.duration_sec)];
+    return `<tr>
     <td><span class="fila-tag">${SHORT[l.fila]}</span></td>
     <td style="font-family:'JetBrains Mono',monospace">${l.slot}</td>
-    <td style="font-family:'JetBrains Mono',monospace">${fmtTime(l.duration_sec)}</td>
+    <td style="font-family:'JetBrains Mono',monospace;color:${col};font-weight:500">${fmtTime(l.duration_sec)}</td>
     <td style="font-family:'JetBrains Mono',monospace">${l.ts_min.toFixed(1)}min</td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
   document.getElementById('logWrap').innerHTML = `
     <table class="log-table">
       <thead><tr><th>fila</th><th>slot</th><th>duração</th><th>TS</th></tr></thead>
@@ -621,6 +639,7 @@ function disableAlarm() {
   showToast('alarme desativado');
 }
 function playAlarm() {
+  // sound
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const beep = (freq, start, dur) => {
@@ -638,6 +657,17 @@ function playAlarm() {
     beep(880, 0.2, 0.15);
     beep(1100, 0.4, 0.25);
   } catch(e) {}
+  // visual flash
+  const flash = document.getElementById('alarmFlash');
+  const m = Math.floor(alarmTarget/60), s = alarmTarget%60;
+  document.getElementById('alarmFlashTime').textContent =
+    `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  flash.classList.add('show');
+  flash.style.pointerEvents = 'auto';
+  setTimeout(() => {
+    flash.classList.remove('show');
+    flash.style.pointerEvents = 'none';
+  }, 4000);
 }
 
 document.getElementById('scriptUrl').value = scriptUrl;
