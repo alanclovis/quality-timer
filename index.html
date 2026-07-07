@@ -181,8 +181,15 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
   <div class="stats-row">
     <div class="stat"><div class="stat-label">casos hoje</div><div class="stat-value" id="statCases">0</div><div class="stat-sub">registros</div></div>
     <div class="stat"><div class="stat-label">TS hoje</div><div class="stat-value" id="statTs">0m</div><div class="stat-sub">acumulado</div></div>
-    <div class="stat"><div class="stat-label">média/caso</div><div class="stat-value" id="statAvg">—</div><div class="stat-sub">minutos</div></div>
+    <div class="stat"><div class="stat-label">média geral/caso</div><div class="stat-value" id="statAvg">—</div><div class="stat-sub">minutos</div></div>
     <div class="stat"><div class="stat-label">última fila</div><div class="stat-value" style="font-size:13px;padding-top:4px" id="statLast">—</div><div class="stat-sub">&nbsp;</div></div>
+  </div>
+
+  <div id="badgeStatsWrap" style="margin-bottom:1.75rem;display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="label" style="margin-bottom:0">média por badge</div>
+    </div>
+    <div id="badgeStatsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px"></div>
   </div>
 
   <div class="log-section">
@@ -191,7 +198,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
         <div class="label" style="margin-bottom:0">registros de hoje</div>
         <span class="log-count" id="logCount">0 entradas</span>
       </div>
-      <button class="btn-reset" onclick="confirmReset()"><i class="ti ti-trash" style="font-size:12px"></i> zerar dia</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn-reset" onclick="openAddOne()" style="color:var(--purple-light);border-color:var(--purple-dim)"><i class="ti ti-plus" style="font-size:12px"></i> +1 caso</button>
+        <button class="btn-reset" onclick="confirmReset()"><i class="ti ti-trash" style="font-size:12px"></i> zerar dia</button>
+      </div>
     </div>
     <div id="logWrap"><div class="empty">nenhum registro ainda hoje</div></div>
   </div>
@@ -254,6 +264,41 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
       <button class="btn btn-primary" style="padding:7px 16px;font-size:13px" onclick="saveAlarm()">
         <i class="ti ti-bell"></i> ativar alarme
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- +1 modal -->
+<div class="modal-overlay" id="addOneModal">
+  <div class="modal" style="width:400px">
+    <h3>adicionar caso manual</h3>
+    <p style="margin-bottom:1rem">Qual badge e qual foi o tempo dessa análise?</p>
+    <div style="margin-bottom:12px">
+      <div class="label" style="margin-bottom:6px">badge</div>
+      <select id="addOneFila" style="width:100%;background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);outline:none;cursor:pointer">
+        <option value="">selecione a badge...</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="label" style="margin-bottom:6px">tempo gasto</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="number" id="addOneMin" style="width:80px;background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px;font-size:20px;text-align:center;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none" min="0" value="3">
+        <span style="color:var(--muted);font-size:13px">min</span>
+        <input type="number" id="addOneSec" style="width:80px;background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:8px;font-size:20px;text-align:center;font-family:'JetBrains Mono',monospace;color:var(--text);outline:none" min="0" max="59" value="0">
+        <span style="color:var(--muted);font-size:13px">seg</span>
+      </div>
+      <div style="font-size:10px;color:var(--hint);margin-top:6px">atalhos rápidos:</div>
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+        <button class="btn-reset" onclick="setAddOneTime(1,30)" style="font-size:11px;padding:3px 10px">1:30</button>
+        <button class="btn-reset" onclick="setAddOneTime(2,0)" style="font-size:11px;padding:3px 10px">2:00</button>
+        <button class="btn-reset" onclick="setAddOneTime(3,0)" style="font-size:11px;padding:3px 10px">3:00</button>
+        <button class="btn-reset" onclick="setAddOneTime(4,0)" style="font-size:11px;padding:3px 10px">4:00</button>
+        <button class="btn-reset" onclick="setAddOneTime(4,30)" style="font-size:11px;padding:3px 10px">4:30</button>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" style="padding:7px 16px;font-size:13px" onclick="closeAddOne()">cancelar</button>
+      <button class="btn btn-primary" style="padding:7px 16px;font-size:13px" onclick="confirmAddOne()"><i class="ti ti-plus"></i> registrar</button>
     </div>
   </div>
 </div>
@@ -444,6 +489,7 @@ document.addEventListener('keydown', e => {
     if (timerInterval) cancelTimer();
     closeModal();
     closeAlarmModal();
+    if (typeof closeAddOne === 'function') closeAddOne();
   }
 });
 document.addEventListener('keyup', e => {
@@ -475,6 +521,29 @@ function renderStats() {
   document.getElementById('statAvg').textContent = tl.length ? `${(total/60/tl.length).toFixed(1)}` : '—';
   const last = tl[tl.length-1];
   document.getElementById('statLast').textContent = last ? SHORT[last.fila] : '—';
+  // badge averages
+  const byBadge = {};
+  tl.forEach(l => {
+    if (!byBadge[l.fila]) byBadge[l.fila] = { casos: 0, totalSec: 0 };
+    byBadge[l.fila].casos++;
+    byBadge[l.fila].totalSec += l.duration_sec;
+  });
+  const wrap = document.getElementById('badgeStatsWrap');
+  const grid = document.getElementById('badgeStatsGrid');
+  if (!Object.keys(byBadge).length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const colorMap = { amber: 'var(--amber)', green: 'var(--green)', red: 'var(--red)' };
+  grid.innerHTML = Object.entries(byBadge)
+    .sort((a,b) => b[1].casos - a[1].casos)
+    .map(([fila, v]) => {
+      const avg = v.totalSec / v.casos;
+      const col = colorMap[tsColor(avg)];
+      return `<div class="stat" style="padding:.75rem 1rem">
+        <div class="stat-label" style="font-size:9px;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${fila}">${SHORT[fila]}</div>
+        <div style="font-size:18px;font-weight:500;font-family:'JetBrains Mono',monospace;color:${col}">${(avg/60).toFixed(1)}m</div>
+        <div class="stat-sub">${v.casos} caso${v.casos>1?'s':''}</div>
+      </div>`;
+    }).join('');
 }
 
 function renderLog() {
@@ -589,6 +658,46 @@ async function sendToSheets(entry) {
     s.textContent = 'erro ao enviar'; s.className = 'sync-status err';
   }
   setTimeout(() => { s.textContent = ''; s.className = 'sync-status'; }, 3000);
+}
+
+// +1 manual
+function openAddOne() {
+  const sel = document.getElementById('addOneFila');
+  sel.innerHTML = '<option value="">selecione a badge...</option>';
+  FILAS.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = SHORT[f];
+    if (f === activeBadge) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  document.getElementById('addOneMin').value = 3;
+  document.getElementById('addOneSec').value = 0;
+  document.getElementById('addOneModal').classList.add('show');
+}
+function closeAddOne() { document.getElementById('addOneModal').classList.remove('show'); }
+function setAddOneTime(m, s) {
+  document.getElementById('addOneMin').value = m;
+  document.getElementById('addOneSec').value = s;
+}
+function confirmAddOne() {
+  const fila = document.getElementById('addOneFila').value;
+  const min = parseInt(document.getElementById('addOneMin').value) || 0;
+  const sec = parseInt(document.getElementById('addOneSec').value) || 0;
+  const totalSec = min * 60 + sec;
+  if (!fila) { showToast('selecione uma badge'); return; }
+  if (totalSec <= 0) { showToast('informe um tempo válido'); return; }
+  const entry = {
+    date: todayKey(), slot: getSlot(new Date()),
+    fila, duration_sec: totalSec,
+    ts_min: parseFloat((totalSec/60).toFixed(2)),
+    recorded_at: new Date().toISOString(), manual: true
+  };
+  logs.push(entry);
+  localStorage.setItem('qm_logs', JSON.stringify(logs));
+  closeAddOne();
+  renderStats(); renderLog(); renderCharts();
+  sendToSheets(entry);
+  showToast(`+1 registrado — ${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`);
 }
 
 // alarm state
