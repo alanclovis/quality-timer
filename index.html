@@ -41,12 +41,29 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 
 .label{font-size:10px;font-weight:600;color:var(--hint);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
 
-.badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:6px;margin-bottom:1.75rem}
+.badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:6px}
+.badge-sections{display:flex;flex-direction:column;gap:10px;margin-bottom:1.75rem}
+.badge-group{padding:10px 10px 8px;border-radius:var(--radius);border:0.5px solid var(--border)}
+.badge-group-hsp{background:rgba(96,165,250,.04);border-color:rgba(96,165,250,.22)}
+.badge-group-id{background:rgba(123,110,246,.04);border-color:rgba(123,110,246,.22)}
+.badge-group-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.badge-group-tag{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:4px}
+.badge-group-hsp .badge-group-tag{background:rgba(96,165,250,.15);color:#93c5fd}
+.badge-group-id .badge-group-tag{background:rgba(123,110,246,.15);color:var(--purple-light)}
+.badge-group-sub{font-size:10px;color:var(--hint)}
 .badge-btn{padding:9px 12px;font-size:12px;font-family:'Inter',sans-serif;border:0.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--muted);cursor:pointer;text-align:left;line-height:1.35;transition:border-color .15s,color .15s,background .15s;word-break:break-word}
 .badge-btn:hover{border-color:var(--border2);color:var(--text)}
-.badge-btn.active{background:var(--purple-dim);border-color:var(--purple);color:var(--purple-light);font-weight:500}
+.badge-btn.badge-hsp{border-color:rgba(96,165,250,.28);background:rgba(96,165,250,.05)}
+.badge-btn.badge-hsp .badge-prefix{color:#60a5fa}
+.badge-btn.badge-hsp:hover{border-color:rgba(96,165,250,.5);color:#bfdbfe}
+.badge-btn.badge-hsp.active{background:rgba(96,165,250,.14);border-color:#60a5fa;color:#93c5fd;font-weight:500}
+.badge-btn.badge-hsp.active .badge-prefix{color:#60a5fa}
+.badge-btn.badge-id{border-color:rgba(123,110,246,.28);background:rgba(123,110,246,.05)}
+.badge-btn.badge-id .badge-prefix{color:var(--purple)}
+.badge-btn.badge-id:hover{border-color:rgba(123,110,246,.5);color:var(--purple-light)}
+.badge-btn.badge-id.active{background:var(--purple-dim);border-color:var(--purple);color:var(--purple-light);font-weight:500}
+.badge-btn.badge-id.active .badge-prefix{color:var(--purple)}
 .badge-prefix{display:block;font-size:10px;color:var(--hint);margin-bottom:2px;font-family:'JetBrains Mono',monospace}
-.badge-btn.active .badge-prefix{color:var(--purple)}
 
 .timer-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:1.5rem;margin-bottom:1.5rem}
 .timer-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem}
@@ -83,7 +100,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
 .log-table td{padding:8px 10px;border-bottom:0.5px solid var(--border);color:var(--muted);font-size:12px;vertical-align:middle}
 .log-table td:first-child{color:var(--text)}
 .log-table tr:last-child td{border-bottom:none}
-.fila-tag{display:inline-block;padding:2px 8px;background:var(--purple-dim);color:var(--purple-light);border-radius:4px;font-size:11px;font-family:'JetBrains Mono',monospace;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fila-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-family:'JetBrains Mono',monospace;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fila-tag-hsp{background:rgba(96,165,250,.14);color:#93c5fd}
+.fila-tag-id{background:var(--purple-dim);color:var(--purple-light)}
+.badge-stat-hsp{border-left:2px solid #60a5fa}
+.badge-stat-id{border-left:2px solid var(--purple)}
 .empty{text-align:center;padding:2rem;color:var(--hint);font-size:13px;border:0.5px dashed var(--border);border-radius:var(--radius-sm)}
 
 .chart-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.75rem}
@@ -152,7 +173,22 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-
   </div>
 
   <div class="label">badge ativa</div>
-  <div class="badge-grid" id="badgeGrid"></div>
+  <div class="badge-sections">
+    <div class="badge-group badge-group-hsp">
+      <div class="badge-group-head">
+        <span class="badge-group-tag">HSP</span>
+        <span class="badge-group-sub">hsp-id · 4 filas</span>
+      </div>
+      <div class="badge-grid" id="badgeGridHsp"></div>
+    </div>
+    <div class="badge-group badge-group-id">
+      <div class="badge-group-head">
+        <span class="badge-group-tag">ID</span>
+        <span class="badge-group-sub">id · 3 filas</span>
+      </div>
+      <div class="badge-grid" id="badgeGridId"></div>
+    </div>
+  </div>
 
   <div class="timer-card">
     <div class="timer-meta">
@@ -346,7 +382,11 @@ const PREFIX = {
   'data-labeling-id-deep-dive-reversed-cases':'id',
   'data-labeling-id-catch-and-release':       'id'
 };
-const COLORS = ['#7b6ef6','#3ecf8e','#f9a840','#f87171','#60a5fa','#a78bfa','#34d399'];
+const COLORS = ['#60a5fa','#38bdf8','#22d3ee','#34d399','#7b6ef6','#a78bfa','#c4b5fd'];
+
+function filaGroup(f) { return PREFIX[f] === 'hsp-id' ? 'hsp' : 'id'; }
+const FILAS_HSP = FILAS.filter(f => PREFIX[f] === 'hsp-id');
+const FILAS_ID = FILAS.filter(f => PREFIX[f] === 'id');
 
 let activeBadge = localStorage.getItem('qm_badge') || null;
 let timerInterval = null;
@@ -390,10 +430,14 @@ function updateDateChip() {
 }
 
 function renderBadges() {
-  document.getElementById('badgeGrid').innerHTML = FILAS.map(f => `
-    <button class="badge-btn${activeBadge===f?' active':''}" onclick="selectBadge('${f}')">
+  const btn = f => {
+    const g = filaGroup(f);
+    return `<button class="badge-btn badge-${g}${activeBadge===f?' active':''}" onclick="selectBadge('${f}')">
       <span class="badge-prefix">${PREFIX[f]}</span>${SHORT[f]}
-    </button>`).join('');
+    </button>`;
+  };
+  document.getElementById('badgeGridHsp').innerHTML = FILAS_HSP.map(btn).join('');
+  document.getElementById('badgeGridId').innerHTML = FILAS_ID.map(btn).join('');
 }
 function selectBadge(f) {
   activeBadge = f;
@@ -538,7 +582,8 @@ function renderStats() {
     .map(([fila, v]) => {
       const avg = v.totalSec / v.casos;
       const col = colorMap[tsColor(avg)];
-      return `<div class="stat" style="padding:.75rem 1rem">
+      const g = filaGroup(fila);
+      return `<div class="stat badge-stat badge-stat-${g}" style="padding:.75rem 1rem">
         <div class="stat-label" style="font-size:9px;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${fila}">${SHORT[fila]}</div>
         <div style="font-size:18px;font-weight:500;font-family:'JetBrains Mono',monospace;color:${col}">${(avg/60).toFixed(1)}m</div>
         <div class="stat-sub">${v.casos} caso${v.casos>1?'s':''}</div>
@@ -557,7 +602,7 @@ function renderLog() {
   const rows = [...tl].reverse().map(l => {
     const col = colorMap[tsColor(l.duration_sec)];
     return `<tr>
-    <td><span class="fila-tag">${SHORT[l.fila]}</span></td>
+    <td><span class="fila-tag fila-tag-${filaGroup(l.fila)}">${SHORT[l.fila]}</span></td>
     <td style="font-family:'JetBrains Mono',monospace">${l.slot}</td>
     <td style="font-family:'JetBrains Mono',monospace;color:${col};font-weight:500">${fmtTime(l.duration_sec)}</td>
     <td style="font-family:'JetBrains Mono',monospace">${l.ts_min.toFixed(1)}min</td>
